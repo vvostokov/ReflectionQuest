@@ -2,10 +2,10 @@ import 'package:hive/hive.dart';
 
 part 'plan_task.g.dart';
 
-@HiveType(typeId: 2) // Убедитесь, что typeId уникален (DailyLog, вероятно, использует 0 или 1)
+@HiveType(typeId: 2) // Changed to 2 to resolve conflict with another type.
 class PlanTask extends HiveObject {
   @HiveField(0)
-  String id;
+  final String id;
 
   @HiveField(1)
   String text;

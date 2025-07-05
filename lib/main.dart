@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:my_reflection_app/firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart'; 
 import 'package:provider/provider.dart';
+import 'package:my_reflection_app/models/plan_task.dart';
 import 'package:my_reflection_app/services/service_locator.dart';
 import 'models/daily_log.dart';
 import 'screens/home_screen.dart';
@@ -29,6 +31,13 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
+    // Анонимно аутентифицируем пользователя, если он еще не вошел
+    if (FirebaseAuth.instance.currentUser == null) {
+      await FirebaseAuth.instance.signInAnonymously();
+      print('User signed in anonymously with UID: ${FirebaseAuth.instance.currentUser?.uid}');
+    } else {
+      print('User already signed in with UID: ${FirebaseAuth.instance.currentUser?.uid}');
+    }
     // Initialize date formatting for the 'ru_RU' locale.
     await initializeDateFormatting('ru_RU', null);
 
@@ -47,6 +56,7 @@ void main() async {
 
     // Регистрируем наш адаптер
     Hive.registerAdapter(DailyLogAdapter());
+    Hive.registerAdapter(PlanTaskAdapter());
     // Инициализируем контент через наш глобальный экземпляр
     await contentService.initializeContent();
     // Инициализируем и настраиваем уведомления

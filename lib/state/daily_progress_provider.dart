@@ -343,8 +343,8 @@ class DailyProgressProvider with ChangeNotifier {
     // Обновляем _isMorningRitualCompleted только если его статус изменился
     if (newStatus != _isMorningRitualCompleted) {
       _isMorningRitualCompleted = newStatus;
-      if (newStatus) { // Если ритуал только что был завершен
-        await _addPoints(getPointsForRitualLevel(_currentRitualLevel));
+      if (newStatus) {
+        await _addPoints(gamificationService.getPointsForRitualLevel(_currentRitualLevel));
       }
       notifyListeners(); // Уведомляем слушателей об изменении статуса ритуала
     }
@@ -440,7 +440,7 @@ class DailyProgressProvider with ChangeNotifier {
 
   Future<void> completeMorningQuestions() async {
     if (_morningQuestionsCompleted) return;
-    await _addPoints(getPointsForQuestionLevel(_morningQuestionLevel));
+    await _addPoints(gamificationService.getPointsForQuestionLevel(_morningQuestionLevel));
     _morningQuestionsCompleted = true;
     await checkAchievements();
     _todayLog.morningQuestionsCompleted = true;
@@ -452,7 +452,7 @@ class DailyProgressProvider with ChangeNotifier {
 
   Future<void> completeAfternoonQuestions() async {
     if (_afternoonQuestionsCompleted) return;
-    await _addPoints(getPointsForQuestionLevel(_afternoonQuestionLevel));
+    await _addPoints(gamificationService.getPointsForQuestionLevel(_afternoonQuestionLevel));
     _afternoonQuestionsCompleted = true;
     await checkAchievements();
     _todayLog.afternoonQuestionsCompleted = true;
@@ -464,7 +464,7 @@ class DailyProgressProvider with ChangeNotifier {
 
   Future<void> completeEveningQuestions() async {
     if (_eveningQuestionsCompleted) return;
-    await _addPoints(getPointsForQuestionLevel(_eveningQuestionLevel));
+    await _addPoints(gamificationService.getPointsForQuestionLevel(_eveningQuestionLevel));
     _eveningQuestionsCompleted = true;
     await checkAchievements();
     _todayLog.eveningQuestionsCompleted = true;
@@ -476,7 +476,7 @@ class DailyProgressProvider with ChangeNotifier {
 
   Future<void> completeTasks() async {
     if (_tasksCompleted) return;
-    await _addPoints(getPointsForTaskLevel(_currentTaskLevel));
+    await _addPoints(gamificationService.getPointsForTaskLevel(_currentTaskLevel));
     _tasksCompleted = true;
     await checkAchievements();
     _todayLog.tasksCompleted = true;
@@ -490,11 +490,33 @@ class DailyProgressProvider with ChangeNotifier {
   Future<void> saveQuestionAnswers(Map<String, String> answers) async {
     _todayLog.questionAnswers ??= {};
     _todayLog.questionAnswers!.addAll(answers);
+    
+    // --- Максимально полезная и безопасная аналитика ---
+    answers.forEach((questionId, answerText) {
+      if (answerText.isNotEmpty) {
+        analyticsService.logCustomEvent(
+          eventName: 'question_answered',
+          parameters: {
+            'question_id': questionId.replaceAll('.', '_'), // Firebase не любит точки в ключах
+            'answer_length': answerText.length, // Логируем точную длину ответа
+          },
+        );
+      }
+    });
+
     await _dbService.saveLog(_todayLog);
   }
 
   Future<void> saveTaskProgress(
       Map<String, bool> status, Map<String, String> comments) async {
+    // --- Аналитика для ежедневных заданий ---
+    status.forEach((taskId, isCompleted) {
+      // Логируем событие, только если статус изменился на "выполнено"
+      if (isCompleted && !(_todayLog.taskStatus?[taskId] ?? false)) {
+        analyticsService.logCustomEvent(eventName: 'daily_task_completed', parameters: {'task_id': taskId});
+      }
+    });
+
     // BUG FIX: Create new maps to ensure the Provider detects the state change.
     // Mutating the existing map (`_todayLog.taskStatus!.addAll(...)`) is not enough.
     final newStatus = Map<String, bool>.from(_todayLog.taskStatus ?? {});
@@ -858,30 +880,6 @@ class DailyProgressProvider with ChangeNotifier {
 
   void clearNewlyUnlockedAchievements() {
     newlyUnlockedAchievements.clear();
-  }
-
-  int getPointsForRitualLevel(RitualLevel level) {
-    switch (level) {
-      case RitualLevel.easy: return 10;
-      case RitualLevel.medium: return 20;
-      case RitualLevel.hard: return 30;
-    }
-  }
-
-  int getPointsForTaskLevel(TaskLevel level) {
-    switch (level) {
-      case TaskLevel.easy: return 10;
-      case TaskLevel.medium: return 20;
-      case TaskLevel.hard: return 30;
-    }
-  }
-
-  int getPointsForQuestionLevel(QuestionLevel level) {
-    switch (level) {
-      case QuestionLevel.easy: return 10;
-      case QuestionLevel.medium: return 20;
-      case QuestionLevel.hard: return 30;
-    }
   }
 
   /// Generates a textual summary of the user's day for external services like AI.

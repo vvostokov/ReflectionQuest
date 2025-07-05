@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:my_reflection_app/services/ai_recommendation_service.dart';
+import 'package:my_reflection_app/services/service_locator.dart';
 import 'package:my_reflection_app/state/daily_progress_provider.dart';
 
 class AIRecommendationProvider with ChangeNotifier {
@@ -29,9 +30,17 @@ class AIRecommendationProvider with ChangeNotifier {
     try {
       final summary = _progressProvider.generateDailySummary();
       _recommendation = await _aiService.getRecommendations(summary);
+      // Логируем успешное получение рекомендации
+      analyticsService.logCustomEvent(eventName: 'ai_recommendation_success');
     } catch (e) {
       _error = "Не удалось получить рекомендации. Пожалуйста, попробуйте еще раз.";
       print(e); // For debugging
+      // Логируем ошибку, чтобы знать, как часто она возникает
+      analyticsService.logCustomEvent(
+        eventName: 'ai_recommendation_failure',
+        // Обрезаем сообщение об ошибке, чтобы оно поместилось в лимиты аналитики
+        parameters: {'error': e.toString().substring(0, (e.toString().length > 99) ? 99 : e.toString().length)},
+      );
     } finally {
       _isFetching = false;
       notifyListeners();

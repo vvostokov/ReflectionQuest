@@ -9,6 +9,18 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
+  // --- НАЧАЛО БЛОКА ДЛЯ РЕШЕНИЯ ПРОБЛЕМЫ CORS ---
+  // Устанавливаем заголовки, разрешающие кросс-доменные запросы
+  response.setHeader('Access-Control-Allow-Credentials', 'true');
+  response.setHeader('Access-Control-Allow-Origin', '*'); // Разрешаем все домены
+  response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Обрабатываем предварительный запрос OPTIONS от браузера
+  if (request.method === 'OPTIONS') {
+    return response.status(200).end();
+  }
+  // --- КОНЕЦ БЛОКА ДЛЯ РЕШЕНИЯ ПРОБЛЕМЫ CORS ---
   // Разрешаем только POST-запросы
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method Not Allowed' });

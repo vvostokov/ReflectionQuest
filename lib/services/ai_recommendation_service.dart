@@ -2,13 +2,22 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AIRecommendationService {
-  // ВАЖНО: Замените 'YOUR_PROJECT_NAME' на имя вашего проекта в Vercel после развертывания.
-  final String _vercelFunctionUrl = 'https://YOUR_PROJECT_NAME.vercel.app/api/getAiRecommendations';
+  // Определяем базовый URL из переменной окружения
+  static const _baseUrl = String.fromEnvironment(
+    'VERCEL_BASE_URL',
+    defaultValue: 'https://YOUR_PROJECT_NAME.vercel.app',
+  );
+  // Собираем полный URL для конкретно этого сервиса
+  static const String _functionUrl = '$_baseUrl/api/getAiRecommendations';
 
   /// Получает рекомендации от нейросети через Vercel.
   Future<String> getRecommendations(String dailySummary) async {
     print('Вызываю Vercel функцию...');
-    final uri = Uri.parse(_vercelFunctionUrl);
+    if (_functionUrl.contains('YOUR_PROJECT_NAME')) {
+      throw Exception(
+          'Vercel URL не настроен. Запустите приложение с --dart-define=VERCEL_BASE_URL=...');
+    }
+    final uri = Uri.parse(_functionUrl);
 
     try {
       final response = await http.post(

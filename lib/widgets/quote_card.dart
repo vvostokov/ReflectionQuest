@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/quote_service.dart';
+import 'package:my_reflection_app/services/quote_service.dart';
 
 class QuoteCard extends StatefulWidget {
   final PageController pageController;
@@ -15,6 +15,7 @@ class QuoteCard extends StatefulWidget {
 }
 
 class _QuoteCardState extends State<QuoteCard> {
+  static const double _kVerticalDragVelocity = 200.0;
   late final List<Quote> _quotes;
   final PageController _quotePageController = PageController();
   int _currentQuoteIndex = 0;
@@ -38,10 +39,33 @@ class _QuoteCardState extends State<QuoteCard> {
     super.dispose();
   }
 
+  // Helper method to calculate the parallax effect based on the parent PageController.
+  double _getParallaxHorizontalShift() {
+    // Ensure the controller is attached before accessing its page property.
+    if (!widget.pageController.hasClients || widget.pageController.page == null) {
+      return 0.0;
+    }
+    double page = widget.pageController.page!;
+    double value = page - widget.index;
+    const parallaxFactor = 0.2;
+    return value * parallaxFactor;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final cardBorderRadius = BorderRadius.circular(12);
+
+    // Handle the case where no quotes are available to prevent errors.
+    if (_quotes.isEmpty) {
+      return Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: cardBorderRadius),
+        child: const Center(
+          child: Text('Цитаты не найдены.'),
+        ),
+      );
+    }
 
     return Card(
       elevation: 4,
@@ -51,12 +75,7 @@ class _QuoteCardState extends State<QuoteCard> {
       child: AnimatedBuilder(
         animation: widget.pageController,
         builder: (context, child) {
-          double page = widget.pageController.hasClients && widget.pageController.page != null
-              ? widget.pageController.page!
-              : widget.index.toDouble();
-          double value = page - widget.index;
-          const parallaxFactor = 0.2;
-          final horizontalShift = value * parallaxFactor;
+          final horizontalShift = _getParallaxHorizontalShift();
 
           return Container(
             decoration: BoxDecoration(
@@ -75,9 +94,9 @@ class _QuoteCardState extends State<QuoteCard> {
         child: GestureDetector(
           onVerticalDragEnd: (details) {
             // Определяем направление свайпа и переключаем страницу
-            if (details.primaryVelocity! < -200) { // Свайп вверх
+            if (details.primaryVelocity! < -_kVerticalDragVelocity) { // Свайп вверх
               _quotePageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-            } else if (details.primaryVelocity! > 200) { // Свайп вниз
+            } else if (details.primaryVelocity! > _kVerticalDragVelocity) { // Свайп вниз
               _quotePageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
             }
           },
@@ -127,26 +146,6 @@ class _QuoteCardState extends State<QuoteCard> {
                 ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-                  ),
-                );
-              },
-            ),
-            if (_currentQuoteIndex > 0)
-              Positioned(
-                top: 15,
-                child: Icon(Icons.keyboard_arrow_up, color: Colors.white.withOpacity(0.5), size: 32),
-              ),
-            if (_currentQuoteIndex < _quotes.length - 1)
-              Positioned(
-                bottom: 15,
-                child: Icon(Icons.keyboard_arrow_down, color: Colors.white.withOpacity(0.5), size: 32),
-              ),
-          ],
         ),
       ),
     );
